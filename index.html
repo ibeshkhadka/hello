@@ -207,6 +207,82 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
     }, 150);
   })();
 </script>
+<script>
+  (() => {
+    const BLOG_KEY = "ibesh-managed-blog";
+    const SIGNATURE_KEY = "ibesh-markdown-blog-signature";
+    const RELOAD_KEY = "ibesh-markdown-blog-reloaded";
+
+    function slugify(value) {
+      return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "untitled";
+    }
+
+    function parseMarkdownPost(text, filename) {
+      const match = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+      const meta = {};
+      const content = match ? match[2] : text;
+
+      if (match) {
+        match[1].split("\n").forEach((line) => {
+          const [key, ...rest] = line.split(":");
+          if (!key || !rest.length) return;
+          meta[key.trim()] = rest.join(":").trim().replace(/^"|"$/g, "");
+        });
+      }
+
+      const fallbackTitle = filename.replace(/\.md$/i, "").replace(/[-_]+/g, " ");
+      const title = meta.title || fallbackTitle;
+
+      return {
+        slug: meta.slug || slugify(title),
+        title,
+        date: meta.date || "undated",
+        category: meta.category || "misc",
+        excerpt: meta.excerpt || "",
+        content: content.trim()
+      };
+    }
+
+    async function loadMarkdownBlogPosts() {
+      if (window.location.protocol === "file:") return;
+
+      try {
+        const indexResponse = await fetch("posts/posts.json", { cache: "no-store" });
+        if (!indexResponse.ok) return;
+
+        const files = await indexResponse.json();
+        const posts = await Promise.all(files.map(async (file) => {
+          const response = await fetch(`posts/${file}`, { cache: "no-store" });
+          if (!response.ok) throw new Error(`Could not load ${file}`);
+          return parseMarkdownPost(await response.text(), file);
+        }));
+
+        const signature = JSON.stringify(posts.map((post) => [
+          post.slug,
+          post.title,
+          post.date,
+          post.category,
+          post.excerpt,
+          post.content
+        ]));
+
+        if (posts.length && window.localStorage.getItem(SIGNATURE_KEY) !== signature) {
+          window.localStorage.setItem(BLOG_KEY, JSON.stringify(posts));
+          window.localStorage.setItem(SIGNATURE_KEY, signature);
+
+          if (window.sessionStorage.getItem(RELOAD_KEY) !== signature) {
+            window.sessionStorage.setItem(RELOAD_KEY, signature);
+            window.location.reload();
+          }
+        }
+      } catch (error) {
+        console.warn("Blog posts could not be loaded from Markdown files.", error);
+      }
+    }
+
+    window.addEventListener("load", loadMarkdownBlogPosts);
+  })();
+</script>
   </head>
   <body>
     <div id="root"></div>
