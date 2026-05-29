@@ -98,6 +98,21 @@
       .new-category-field[hidden] {
         display: none;
       }
+      .editor-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0 0 10px;
+      }
+      .editor-toolbar button {
+        min-width: 38px;
+        min-height: 34px;
+        border-radius: 999px;
+        padding: 6px 10px;
+      }
+      .editor-toolbar .wide-tool {
+        min-width: 0;
+      }
       .actions {
         display: flex;
         flex-wrap: wrap;
@@ -188,6 +203,17 @@
             </label>
             <label>
               Blog post
+              <div class="editor-toolbar" aria-label="Blog formatting tools">
+                <button type="button" data-format="bold" title="Bold">B</button>
+                <button type="button" data-format="italic" title="Italic"><i>I</i></button>
+                <button type="button" data-format="underline" title="Underline"><u>U</u></button>
+                <button type="button" data-format="heading" title="Heading">H2</button>
+                <button type="button" data-format="list" title="List">+ list</button>
+                <button type="button" data-format="link" title="Link">link</button>
+                <button type="button" data-format="image" title="Image">image</button>
+                <button class="wide-tool" type="button" data-format="pixel" title="Pixel font">pixel</button>
+                <button class="wide-tool" type="button" data-format="mono" title="Mono font">mono</button>
+              </div>
               <textarea id="content">Write your post here.
 
 ## Section heading
@@ -253,6 +279,43 @@ More writing here.</textarea>
         newCategoryField.hidden = fields.category.value !== "new";
         output.textContent = markdown();
       }
+
+      function insertAroundSelection(before, after = "", fallback = "text") {
+        const textarea = fields.content;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = textarea.value.slice(start, end) || fallback;
+        textarea.setRangeText(`${before}${selected}${after}`, start, end, "select");
+        sync();
+        textarea.focus();
+      }
+
+      function insertAtLineStart(prefix, fallback = "Text") {
+        const textarea = fields.content;
+        const start = textarea.selectionStart;
+        const lineStart = textarea.value.lastIndexOf("\n", start - 1) + 1;
+        const selected = textarea.value.slice(textarea.selectionStart, textarea.selectionEnd);
+        const text = selected || fallback;
+        textarea.setRangeText(`${prefix}${text}`, lineStart, textarea.selectionEnd, "select");
+        sync();
+        textarea.focus();
+      }
+
+      document.querySelector(".editor-toolbar").addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-format]");
+        if (!button) return;
+
+        const format = button.dataset.format;
+        if (format === "bold") insertAroundSelection("**", "**", "bold text");
+        if (format === "italic") insertAroundSelection("*", "*", "italic text");
+        if (format === "underline") insertAroundSelection("++", "++", "underlined text");
+        if (format === "heading") insertAtLineStart("## ", "Section heading");
+        if (format === "list") insertAtLineStart("- ", "List item");
+        if (format === "link") insertAroundSelection("[", "](https://example.com)", "link text");
+        if (format === "image") insertAroundSelection("![", "](https://example.com/image.jpg)", "image description");
+        if (format === "pixel") insertAroundSelection("{{pixel:", "}}", "pixel text");
+        if (format === "mono") insertAroundSelection("{{mono:", "}}", "mono text");
+      });
 
       Object.values(fields).forEach((field) => field.addEventListener("input", sync));
       fields.date.value = new Date().toLocaleDateString("en", {

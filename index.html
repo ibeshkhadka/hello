@@ -147,11 +147,42 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
   .blog-category-filter label{color:var(--muted);font-family:var(--font-pixel);font-size:12px;display:block;margin-bottom:8px}
   .blog-category-filter select{width:100%;border:1px solid var(--line);border-radius:999px;background:#ddf1c9;color:var(--ink);font:13px var(--font-mono);padding:8px 10px}
   .managed-row.is-filtered-out{display:none}
+  .markdown-body img{width:min(100%,var(--image-width,680px));height:auto;border:1px solid var(--line);border-radius:8px;margin:18px 0;box-shadow:10px 12px #2428210d}
+  .markdown-body .font-pixel{font-family:var(--font-pixel)}
+  .markdown-body .font-mono{font-family:var(--font-mono)}
   @media (width<=900px){.reading-page{width:min(100% - 36px,720px)}.blog-page{padding-right:0}.blog-category-filter{position:static;width:100%;margin:0 0 22px}}
   @media (width<=620px){.reading-page{width:min(100% - 32px,340px);margin-left:16px;margin-right:auto}}
 </style>
 <script>
   (() => {
+    function escapeHtml(value) {
+      return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function inlineMarkdown(value) {
+      let html = escapeHtml(value);
+      html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy">');
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+      html = html.replace(/\{\{pixel:([^}]+)\}\}/g, '<span class="font-pixel">$1</span>');
+      html = html.replace(/\{\{mono:([^}]+)\}\}/g, '<span class="font-mono">$1</span>');
+      html = html.replace(/\+\+(.+?)\+\+/g, '<u>$1</u>');
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      return html;
+    }
+
+    function enhanceMarkdownDisplay() {
+      document.querySelectorAll(".markdown-body p, .markdown-body li").forEach((node) => {
+        if (node.dataset.enhanced === "true") return;
+        node.innerHTML = inlineMarkdown(node.textContent);
+        node.dataset.enhanced = "true";
+      });
+    }
+
     let selectedCategory = "all";
 
     function readCategory(row) {
@@ -196,10 +227,13 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
     }
 
     window.addEventListener("hashchange", () => setTimeout(syncBlogFilter, 50));
+    window.addEventListener("hashchange", () => setTimeout(enhanceMarkdownDisplay, 50));
     window.addEventListener("load", syncBlogFilter);
+    window.addEventListener("load", enhanceMarkdownDisplay);
     let setupTries = 0;
     const setupTimer = window.setInterval(() => {
       syncBlogFilter();
+      enhanceMarkdownDisplay();
       setupTries += 1;
       if (setupTries > 20 || document.querySelector("#blog-category-select")) {
         window.clearInterval(setupTimer);
