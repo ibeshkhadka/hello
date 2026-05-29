@@ -236,7 +236,11 @@ More writing here.</textarea>
       }
 
       Object.values(fields).forEach((field) => field.addEventListener("input", sync));
-      fields.date.value = new Date().toLocaleDateString("en", { month: "long", year: "numeric" });
+      fields.date.value = new Date().toLocaleDateString("en", {
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      });
       sync();
 
       document.querySelector("#copy-button").addEventListener("click", async () => {
