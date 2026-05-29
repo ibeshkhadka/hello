@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog Admin - Ibesh Khadka</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Pixelify+Sans:wght@400;500&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * { box-sizing: border-box; }
+      :root {
+        --bg: #ddf1c9;
+        --ink: #242821;
+        --muted: #5d6657;
+        --line: #242821b8;
+        --paper: #fffceb94;
+      }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "IBM Plex Mono", "Space Mono", monospace;
+        font-size: 15px;
+        line-height: 1.55;
+      }
+      main {
+        width: min(100% - 40px, 1040px);
+        margin: 0 auto;
+        padding: 48px 0 64px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: start;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 24px;
+        margin-bottom: 28px;
+      }
+      h1, h2, button {
+        font-family: "Pixelify Sans", "IBM Plex Mono", monospace;
+        letter-spacing: 0;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(38px, 7vw, 72px);
+        line-height: .92;
+        font-weight: 500;
+      }
+      p { color: var(--muted); }
+      a { color: inherit; text-underline-offset: 4px; }
+      .back-link {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 14px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+        gap: 28px;
+        align-items: start;
+      }
+      form, .output, .guide {
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+      }
+      label {
+        color: var(--muted);
+        display: grid;
+        gap: 7px;
+        margin-bottom: 14px;
+        font-size: 12px;
+      }
+      input, textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: var(--paper);
+        color: var(--ink);
+        border-radius: 10px;
+        padding: 11px 12px;
+        font: inherit;
+        outline: none;
+      }
+      textarea {
+        min-height: 280px;
+        resize: vertical;
+      }
+      input:focus, textarea:focus {
+        box-shadow: 0 0 0 3px #24282118;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      button, .button-link {
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--ink);
+        border-radius: 999px;
+        cursor: pointer;
+        padding: 8px 14px;
+        text-decoration: none;
+        font-size: 14px;
+      }
+      button:hover, .button-link:hover {
+        background: var(--ink);
+        color: var(--bg);
+      }
+      pre {
+        min-height: 380px;
+        max-height: 620px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        background: var(--paper);
+        border-radius: 10px;
+        padding: 14px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .guide {
+        margin-top: 24px;
+      }
+      .guide ol {
+        color: var(--muted);
+        padding-left: 20px;
+      }
+      .filename {
+        color: var(--ink);
+        font-family: "Pixelify Sans", "IBM Plex Mono", monospace;
+      }
+      @media (max-width: 820px) {
+        header, .layout { grid-template-columns: 1fr; display: grid; }
+        .back-link { width: max-content; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p>Private writing room</p>
+          <h1>Blog Admin</h1>
+          <p>Create a post here, then publish the generated Markdown file to GitHub.</p>
+        </div>
+        <a class="back-link" href="../index.html#blog">Back to site</a>
+      </header>
+
+      <div class="layout">
+        <section>
+          <form id="post-form">
+            <label>
+              Title
+              <input id="title" value="My New Post" />
+            </label>
+            <label>
+              Date
+              <input id="date" value="" />
+            </label>
+            <label>
+              Category
+              <input id="category" value="thought" />
+            </label>
+            <label>
+              Short summary
+              <input id="excerpt" value="One short sentence about the post." />
+            </label>
+            <label>
+              Blog post
+              <textarea id="content">Write your post here.
+
+## Section heading
+
+More writing here.</textarea>
+            </label>
+          </form>
+        </section>
+
+        <aside>
+          <section class="output">
+            <h2>Generated file</h2>
+            <p>Filename: <span class="filename" id="filename">my-new-post.md</span></p>
+            <pre id="markdown-output"></pre>
+            <div class="actions">
+              <button id="copy-button" type="button">Copy Markdown</button>
+              <button id="download-button" type="button">Download File</button>
+              <a class="button-link" href="https://github.com/ibeshkhadka/hello/tree/main/posts" target="_blank" rel="noreferrer">Open Posts Folder</a>
+            </div>
+          </section>
+
+          <section class="guide">
+            <h2>Publish</h2>
+            <ol>
+              <li>Copy or download the generated file.</li>
+              <li>Open the GitHub posts folder.</li>
+              <li>Create the new `.md` file there.</li>
+              <li>Add the filename to `posts/posts.json`.</li>
+            </ol>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <script>
+      const fields = {
+        title: document.querySelector("#title"),
+        date: document.querySelector("#date"),
+        category: document.querySelector("#category"),
+        excerpt: document.querySelector("#excerpt"),
+        content: document.querySelector("#content")
+      };
+      const output = document.querySelector("#markdown-output");
+      const filename = document.querySelector("#filename");
+
+      function slugify(value) {
+        return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "untitled";
+      }
+
+      function markdown() {
+        const title = fields.title.value.trim() || "Untitled";
+        const slug = slugify(title);
+        filename.textContent = `${slug}.md`;
+        return `---\ntitle: "${title}"\nslug: "${slug}"\ndate: "${fields.date.value.trim()}"\ncategory: "${fields.category.value.trim() || "misc"}"\nexcerpt: "${fields.excerpt.value.trim()}"\n---\n\n${fields.content.value.trim()}\n`;
+      }
+
+      function sync() {
+        output.textContent = markdown();
+      }
+
+      Object.values(fields).forEach((field) => field.addEventListener("input", sync));
+      fields.date.value = new Date().toLocaleDateString("en", { month: "long", year: "numeric" });
+      sync();
+
+      document.querySelector("#copy-button").addEventListener("click", async () => {
+        await navigator.clipboard.writeText(markdown());
+      });
+
+      document.querySelector("#download-button").addEventListener("click", () => {
+        const blob = new Blob([markdown()], { type: "text/markdown" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename.textContent;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+    </script>
+  </body>
+</html>

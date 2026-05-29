@@ -283,6 +283,13 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
     window.addEventListener("load", loadMarkdownBlogPosts);
   })();
 </script>
+<script>
+  document.addEventListener("dblclick", (event) => {
+    if (event.target.closest(".wandering-cat")) {
+      window.location.href = new URL("admin/", window.location.href).href;
+    }
+  });
+</script>
   </head>
   <body>
     <div id="root"></div>
