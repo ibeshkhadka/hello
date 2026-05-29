@@ -284,11 +284,29 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
   })();
 </script>
 <script>
-  document.addEventListener("dblclick", (event) => {
-    if (event.target.closest(".wandering-cat")) {
+  (() => {
+    let lastAdminClick = 0;
+
+    function isAdminTrigger(target) {
+      return target instanceof Element && target.closest(".wandering-cat");
+    }
+
+    function openAdmin() {
       window.location.href = new URL("admin/", window.location.href).href;
     }
-  });
+
+    document.addEventListener("dblclick", (event) => {
+      if (isAdminTrigger(event.target)) openAdmin();
+    }, true);
+
+    document.addEventListener("click", (event) => {
+      if (!isAdminTrigger(event.target)) return;
+
+      const now = Date.now();
+      if (now - lastAdminClick < 650) openAdmin();
+      lastAdminClick = now;
+    }, true);
+  })();
 </script>
   </head>
   <body>
