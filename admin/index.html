@@ -133,6 +133,27 @@
         color: var(--muted);
         padding-left: 20px;
       }
+      .publish-panel {
+        border-top: 1px solid var(--line);
+        margin-top: 24px;
+        padding-top: 16px;
+      }
+      .publish-status {
+        min-height: 46px;
+        border: 1px solid #24282133;
+        background: #fffceb52;
+        border-radius: 10px;
+        padding: 10px 12px;
+        color: var(--muted);
+      }
+      .publish-status[data-tone="success"] {
+        color: #315f2f;
+        border-color: #315f2f7a;
+      }
+      .publish-status[data-tone="error"] {
+        color: #7f342f;
+        border-color: #9a5b57a8;
+      }
       .filename {
         color: var(--ink);
         font-family: "Pixelify Sans", "IBM Plex Mono", monospace;
@@ -199,11 +220,21 @@ More writing here.</textarea>
           <section class="guide">
             <h2>Publish</h2>
             <ol>
-              <li>Copy or download the generated file.</li>
-              <li>Open the GitHub posts folder.</li>
-              <li>Create the new `.md` file there.</li>
-              <li>Add the filename to `posts/posts.json`.</li>
+              <li>Create a fine-grained GitHub token with Contents read/write access for this repo.</li>
+              <li>Paste it below only when you are ready to publish.</li>
+              <li>Click Publish to GitHub.</li>
             </ol>
+            <div class="publish-panel">
+              <label>
+                GitHub token
+                <input id="github-token" type="password" autocomplete="off" placeholder="Paste token for this publish only" />
+              </label>
+              <div class="actions">
+                <button id="publish-button" type="button">Publish to GitHub</button>
+                <a class="button-link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create Token</a>
+              </div>
+              <p class="publish-status" id="publish-status">Nothing published yet.</p>
+            </div>
           </section>
         </aside>
       </div>
@@ -219,6 +250,12 @@ More writing here.</textarea>
       };
       const output = document.querySelector("#markdown-output");
       const filename = document.querySelector("#filename");
+      const publishStatus = document.querySelector("#publish-status");
+      const publishButton = document.querySelector("#publish-button");
+      const tokenInput = document.querySelector("#github-token");
+      const repoOwner = "ibeshkhadka";
+      const repoName = "hello";
+      const branch = "main";
 
       function slugify(value) {
         return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "untitled";
@@ -233,6 +270,99 @@ More writing here.</textarea>
 
       function sync() {
         output.textContent = markdown();
+      }
+
+      function setStatus(message, tone = "") {
+        publishStatus.textContent = message;
+        publishStatus.dataset.tone = tone;
+      }
+
+      function encodeBase64(value) {
+        const bytes = new TextEncoder().encode(value);
+        let binary = "";
+        bytes.forEach((byte) => {
+          binary += String.fromCharCode(byte);
+        });
+        return btoa(binary);
+      }
+
+      function decodeBase64(value) {
+        const binary = atob(value.replace(/\n/g, ""));
+        const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+        return new TextDecoder().decode(bytes);
+      }
+
+      async function githubRequest(path, options = {}) {
+        const token = tokenInput.value.trim();
+        if (!token) throw new Error("Paste a GitHub token first.");
+
+        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}${path}`, {
+          ...options,
+          headers: {
+            Accept: "application/vnd.github+json",
+            Authorization: `Bearer ${token}`,
+            "X-GitHub-Api-Version": "2022-11-28",
+            ...(options.headers || {})
+          }
+        });
+
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : null;
+
+        if (!response.ok) {
+          throw new Error(data?.message || `GitHub request failed with ${response.status}.`);
+        }
+
+        return data;
+      }
+
+      async function publishPost() {
+        const postFile = filename.textContent;
+        const postPath = `posts/${postFile}`;
+        const postMarkdown = markdown();
+
+        publishButton.disabled = true;
+        setStatus("Publishing post to GitHub...");
+
+        try {
+          let existingPost = null;
+          try {
+            existingPost = await githubRequest(`/contents/${postPath}?ref=${branch}`);
+          } catch (error) {
+            if (!/Not Found/i.test(error.message)) throw error;
+          }
+
+          await githubRequest(`/contents/${postPath}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              message: `Add blog post: ${fields.title.value.trim() || "Untitled"}`,
+              content: encodeBase64(postMarkdown),
+              branch,
+              ...(existingPost?.sha ? { sha: existingPost.sha } : {})
+            })
+          });
+
+          const indexFile = await githubRequest(`/contents/posts/posts.json?ref=${branch}`);
+          const postList = JSON.parse(decodeBase64(indexFile.content));
+          const nextList = postList.includes(postFile) ? postList : [postFile, ...postList];
+
+          await githubRequest("/contents/posts/posts.json", {
+            method: "PUT",
+            body: JSON.stringify({
+              message: `Register blog post: ${fields.title.value.trim() || "Untitled"}`,
+              content: encodeBase64(`${JSON.stringify(nextList, null, 2)}\n`),
+              branch,
+              sha: indexFile.sha
+            })
+          });
+
+          tokenInput.value = "";
+          setStatus("Published. GitHub Pages may take a minute to show the new post.", "success");
+        } catch (error) {
+          setStatus(error.message, "error");
+        } finally {
+          publishButton.disabled = false;
+        }
       }
 
       Object.values(fields).forEach((field) => field.addEventListener("input", sync));
@@ -251,6 +381,8 @@ More writing here.</textarea>
         link.click();
         URL.revokeObjectURL(link.href);
       });
+
+      publishButton.addEventListener("click", publishPost);
     </script>
   </body>
 </html>
