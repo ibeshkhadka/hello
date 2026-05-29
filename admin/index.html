@@ -95,8 +95,38 @@
       input:focus, select:focus, textarea:focus {
         box-shadow: 0 0 0 3px #24282118;
       }
-      .new-category-field[hidden] {
-        display: none;
+      .category-picker {
+        display: grid;
+        gap: 8px;
+      }
+      .category-menu {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .category-row {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fffceb4d;
+        overflow: hidden;
+      }
+      .category-row button {
+        min-height: 34px;
+        border: 0;
+        border-radius: 0;
+        padding: 5px 11px;
+        text-align: left;
+      }
+      .category-row .delete-category {
+        text-align: center;
+        width: 34px;
+        padding-inline: 0;
+        border-left: 1px solid #2428213d;
+      }
+      .category-row .create-category {
+        text-align: center;
       }
       .editor-toolbar {
         display: flex;
@@ -185,17 +215,10 @@
             </label>
             <label>
               Category
-              <select id="category">
-                <option value="thought">thought</option>
-                <option value="tools">tools</option>
-                <option value="design">design</option>
-                <option value="thoughtanifnew">thoughtanifnew</option>
-                <option value="new">Create new category...</option>
-              </select>
-            </label>
-            <label class="new-category-field" hidden>
-              New category
-              <input id="new-category" placeholder="Type new category" />
+              <div class="category-picker">
+                <input id="category" value="thought" autocomplete="off" placeholder="Type or choose category" />
+                <div class="category-menu" id="category-menu" aria-label="Available categories"></div>
+              </div>
             </label>
             <label>
               Short summary
@@ -253,13 +276,16 @@ More writing here.</textarea>
         title: document.querySelector("#title"),
         date: document.querySelector("#date"),
         category: document.querySelector("#category"),
-        newCategory: document.querySelector("#new-category"),
         excerpt: document.querySelector("#excerpt"),
         content: document.querySelector("#content")
       };
       const output = document.querySelector("#markdown-output");
       const filename = document.querySelector("#filename");
-      const newCategoryField = document.querySelector(".new-category-field");
+      const categoryMenu = document.querySelector("#category-menu");
+      const categoryStorageKey = "ibesh-blog-admin-categories";
+      const deletedCategoryStorageKey = "ibesh-blog-admin-deleted-categories";
+      const defaultCategories = ["thought", "tools", "design", "others"];
+      let categories = [...defaultCategories];
 
       function slugify(value) {
         return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "untitled";
@@ -268,16 +294,104 @@ More writing here.</textarea>
       function markdown() {
         const title = fields.title.value.trim() || "Untitled";
         const slug = slugify(title);
-        const category = fields.category.value === "new"
-          ? fields.newCategory.value.trim()
-          : fields.category.value.trim();
+        const category = fields.category.value.trim() || "others";
         filename.textContent = `${slug}.md`;
-        return `---\ntitle: "${title}"\nslug: "${slug}"\ndate: "${fields.date.value.trim()}"\ncategory: "${category || "misc"}"\nexcerpt: "${fields.excerpt.value.trim()}"\n---\n\n${fields.content.value.trim()}\n`;
+        return `---\ntitle: "${title}"\nslug: "${slug}"\ndate: "${fields.date.value.trim()}"\ncategory: "${category}"\nexcerpt: "${fields.excerpt.value.trim()}"\n---\n\n${fields.content.value.trim()}\n`;
       }
 
       function sync() {
-        newCategoryField.hidden = fields.category.value !== "new";
         output.textContent = markdown();
+        renderCategories();
+      }
+
+      function readStoredList(key) {
+        try {
+          const value = JSON.parse(window.localStorage.getItem(key) || "[]");
+          return Array.isArray(value) ? value : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function saveCustomCategories(nextCategories) {
+        const custom = nextCategories.filter((category) => !defaultCategories.includes(category));
+        window.localStorage.setItem(categoryStorageKey, JSON.stringify(custom));
+      }
+
+      function saveDeletedCategories(nextDeleted) {
+        window.localStorage.setItem(deletedCategoryStorageKey, JSON.stringify(nextDeleted));
+      }
+
+      function normalizeCategories(values) {
+        const deleted = new Set(readStoredList(deletedCategoryStorageKey));
+        deleted.delete("others");
+        return [...new Set(values.map((value) => value.trim()).filter(Boolean))]
+          .filter((category) => !deleted.has(category))
+          .sort((a, b) => a.localeCompare(b));
+      }
+
+      async function loadCategories() {
+        const collected = [...defaultCategories, ...readStoredList(categoryStorageKey)];
+
+        try {
+          const indexResponse = await fetch("../data/posts.json", { cache: "no-store" });
+          const files = indexResponse.ok ? await indexResponse.json() : [];
+          const postCategories = await Promise.all(files.map(async (file) => {
+            const response = await fetch(`../posts/${file}`, { cache: "no-store" });
+            if (!response.ok) return "";
+            const text = await response.text();
+            return text.match(/\ncategory:\s*"?(.*?)"?\n/)?.[1] || "others";
+          }));
+          collected.push(...postCategories);
+        } catch {
+          // Existing saved categories are enough when offline or previewing from file.
+        }
+
+        categories = normalizeCategories(collected);
+        renderCategories();
+      }
+
+      function renderCategories() {
+        const query = fields.category.value.trim().toLowerCase();
+        const shown = categories.filter((category) => category.toLowerCase().includes(query));
+        const exactMatch = categories.some((category) => category.toLowerCase() === query);
+        const createLabel = fields.category.value.trim();
+
+        categoryMenu.innerHTML = "";
+
+        shown.forEach((category) => {
+          const row = document.createElement("div");
+          row.className = "category-row";
+          const selectButton = document.createElement("button");
+          selectButton.type = "button";
+          selectButton.dataset.selectCategory = category;
+          selectButton.textContent = category;
+          row.append(selectButton);
+
+          if (category !== "others") {
+            const deleteButton = document.createElement("button");
+            deleteButton.className = "delete-category";
+            deleteButton.type = "button";
+            deleteButton.dataset.deleteCategory = category;
+            deleteButton.setAttribute("aria-label", `Delete ${category}`);
+            deleteButton.textContent = "x";
+            row.append(deleteButton);
+          }
+
+          categoryMenu.appendChild(row);
+        });
+
+        if (createLabel && !exactMatch) {
+          const row = document.createElement("div");
+          row.className = "category-row";
+          const createButton = document.createElement("button");
+          createButton.className = "create-category";
+          createButton.type = "button";
+          createButton.dataset.createCategory = createLabel;
+          createButton.textContent = `Create "${createLabel}"`;
+          row.append(createButton);
+          categoryMenu.appendChild(row);
+        }
       }
 
       function insertAroundSelection(before, after = "", fallback = "text") {
@@ -317,12 +431,46 @@ More writing here.</textarea>
         if (format === "mono") insertAroundSelection("{{mono:", "}}", "mono text");
       });
 
+      categoryMenu.addEventListener("click", (event) => {
+        const selectButton = event.target.closest("[data-select-category]");
+        const createButton = event.target.closest("[data-create-category]");
+        const deleteButton = event.target.closest("[data-delete-category]");
+
+        if (selectButton) {
+          fields.category.value = selectButton.dataset.selectCategory;
+          sync();
+        }
+
+        if (createButton) {
+          const category = createButton.dataset.createCategory.trim();
+          const deleted = new Set(readStoredList(deletedCategoryStorageKey));
+          deleted.delete(category);
+          saveDeletedCategories([...deleted]);
+          categories = normalizeCategories([...categories, category]);
+          saveCustomCategories(categories);
+          fields.category.value = category;
+          sync();
+        }
+
+        if (deleteButton) {
+          const category = deleteButton.dataset.deleteCategory;
+          const deleted = new Set(readStoredList(deletedCategoryStorageKey));
+          deleted.add(category);
+          saveDeletedCategories([...deleted]);
+          categories = categories.filter((item) => item !== category);
+          if (fields.category.value.trim() === category) fields.category.value = "others";
+          saveCustomCategories(categories);
+          sync();
+        }
+      });
+
       Object.values(fields).forEach((field) => field.addEventListener("input", sync));
       fields.date.value = new Date().toLocaleDateString("en", {
         month: "long",
         day: "numeric",
         year: "numeric"
       });
+      loadCategories();
       sync();
 
       document.querySelector("#copy-button").addEventListener("click", async () => {
