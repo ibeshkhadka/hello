@@ -247,7 +247,7 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
       if (window.location.protocol === "file:") return;
 
       try {
-        const indexResponse = await fetch("posts/posts.json", { cache: "no-store" });
+        const indexResponse = await fetch("data/posts.json", { cache: "no-store" });
         if (!indexResponse.ok) return;
 
         const files = await indexResponse.json();

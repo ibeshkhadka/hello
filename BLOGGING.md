@@ -21,7 +21,7 @@ Write your post here.
 More writing here.
 ```
 
-3. Open `posts/posts.json`.
+3. Open `data/posts.json`.
 4. Add your new filename to the list.
 
 Example:
