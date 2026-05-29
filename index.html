@@ -142,8 +142,8 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
 
   .reading-page{width:min(100% - 48px,920px)}
   .reading-page header,.reading-page .markdown-body,.reading-page .reading-nav{max-width:680px}
-  .blog-page{position:relative;padding-right:190px}
-  .blog-category-filter{position:absolute;top:150px;right:0;width:150px;border-top:1px solid var(--line);padding-top:12px}
+  .blog-page{position:relative;padding-right:350px}
+  .blog-category-filter{position:absolute;top:150px;right:0;width:max-content;min-width:150px;max-width:320px;border-top:1px solid var(--line);padding-top:12px}
   .blog-category-filter label,.blog-archive-title{color:var(--muted);font-family:var(--font-pixel);font-size:12px;display:block;margin-bottom:8px}
   .blog-category-filter select{width:100%;border:1px solid var(--line);border-radius:999px;background:#ddf1c9;color:var(--ink);font:13px var(--font-mono);padding:8px 10px}
   .blog-archive{border:1px solid var(--line);background:#fffceb52;border-radius:8px;margin-top:22px;padding:12px}
@@ -154,7 +154,7 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
   .blog-archive summary:after{content:"+";font-family:var(--font-pixel)}
   .blog-archive details[open] summary:after{content:"-"}
   .blog-archive-count{color:var(--muted)}
-  .blog-archive a{color:var(--ink);font-size:12px;line-height:1.35;text-decoration:none;display:block;margin-top:8px}
+  .blog-archive a{color:var(--ink);font-size:12px;line-height:1.35;text-decoration:none;display:block;margin-top:8px;white-space:nowrap}
   .blog-archive a:hover{opacity:.72}
   .managed-row.is-filtered-out{display:none}
   .markdown-body img{width:min(100%,var(--image-width,680px));height:auto;border:1px solid var(--line);border-radius:8px;margin:18px 0;box-shadow:10px 12px #2428210d}
@@ -301,9 +301,8 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
       archiveList.textContent = "";
       [...groups.values()]
         .sort((a, b) => b.sort - a.sort)
-        .forEach((group, index) => {
+        .forEach((group) => {
           const details = document.createElement("details");
-          if (index === 0) details.open = true;
 
           const summary = document.createElement("summary");
           const label = document.createElement("span");
