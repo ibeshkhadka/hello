@@ -78,7 +78,7 @@
         margin-bottom: 14px;
         font-size: 12px;
       }
-      input, textarea {
+      input, select, textarea {
         width: 100%;
         border: 1px solid var(--line);
         background: var(--paper);
@@ -92,8 +92,11 @@
         min-height: 280px;
         resize: vertical;
       }
-      input:focus, textarea:focus {
+      input:focus, select:focus, textarea:focus {
         box-shadow: 0 0 0 3px #24282118;
+      }
+      .new-category-field[hidden] {
+        display: none;
       }
       .actions {
         display: flex;
@@ -167,7 +170,17 @@
             </label>
             <label>
               Category
-              <input id="category" value="thought" />
+              <select id="category">
+                <option value="thought">thought</option>
+                <option value="tools">tools</option>
+                <option value="design">design</option>
+                <option value="thoughtanifnew">thoughtanifnew</option>
+                <option value="new">Create new category...</option>
+              </select>
+            </label>
+            <label class="new-category-field" hidden>
+              New category
+              <input id="new-category" placeholder="Type new category" />
             </label>
             <label>
               Short summary
@@ -214,11 +227,13 @@ More writing here.</textarea>
         title: document.querySelector("#title"),
         date: document.querySelector("#date"),
         category: document.querySelector("#category"),
+        newCategory: document.querySelector("#new-category"),
         excerpt: document.querySelector("#excerpt"),
         content: document.querySelector("#content")
       };
       const output = document.querySelector("#markdown-output");
       const filename = document.querySelector("#filename");
+      const newCategoryField = document.querySelector(".new-category-field");
 
       function slugify(value) {
         return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "untitled";
@@ -227,11 +242,15 @@ More writing here.</textarea>
       function markdown() {
         const title = fields.title.value.trim() || "Untitled";
         const slug = slugify(title);
+        const category = fields.category.value === "new"
+          ? fields.newCategory.value.trim()
+          : fields.category.value.trim();
         filename.textContent = `${slug}.md`;
-        return `---\ntitle: "${title}"\nslug: "${slug}"\ndate: "${fields.date.value.trim()}"\ncategory: "${fields.category.value.trim() || "misc"}"\nexcerpt: "${fields.excerpt.value.trim()}"\n---\n\n${fields.content.value.trim()}\n`;
+        return `---\ntitle: "${title}"\nslug: "${slug}"\ndate: "${fields.date.value.trim()}"\ncategory: "${category || "misc"}"\nexcerpt: "${fields.excerpt.value.trim()}"\n---\n\n${fields.content.value.trim()}\n`;
       }
 
       function sync() {
+        newCategoryField.hidden = fields.category.value !== "new";
         output.textContent = markdown();
       }
 
