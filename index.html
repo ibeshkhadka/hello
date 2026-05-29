@@ -144,8 +144,17 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
   .reading-page header,.reading-page .markdown-body,.reading-page .reading-nav{max-width:680px}
   .blog-page{position:relative;padding-right:190px}
   .blog-category-filter{position:absolute;top:150px;right:0;width:150px;border-top:1px solid var(--line);padding-top:12px}
-  .blog-category-filter label{color:var(--muted);font-family:var(--font-pixel);font-size:12px;display:block;margin-bottom:8px}
+  .blog-category-filter label,.blog-archive-title{color:var(--muted);font-family:var(--font-pixel);font-size:12px;display:block;margin-bottom:8px}
   .blog-category-filter select{width:100%;border:1px solid var(--line);border-radius:999px;background:#ddf1c9;color:var(--ink);font:13px var(--font-mono);padding:8px 10px}
+  .blog-archive{border-top:1px solid var(--line);margin-top:22px;padding-top:12px}
+  .blog-archive details{border-bottom:1px solid var(--line-soft);padding:7px 0}
+  .blog-archive summary{cursor:pointer;font-family:var(--font-pixel);font-size:13px;list-style:none;display:flex;justify-content:space-between;gap:8px}
+  .blog-archive summary::-webkit-details-marker{display:none}
+  .blog-archive summary:after{content:"+";font-family:var(--font-pixel)}
+  .blog-archive details[open] summary:after{content:"-"}
+  .blog-archive-count{color:var(--muted)}
+  .blog-archive a{color:var(--ink);font-size:12px;line-height:1.35;text-decoration:none;display:block;margin-top:8px}
+  .blog-archive a:hover{opacity:.72}
   .managed-row.is-filtered-out{display:none}
   .markdown-body img{width:min(100%,var(--image-width,680px));height:auto;border:1px solid var(--line);border-radius:8px;margin:18px 0;box-shadow:10px 12px #2428210d}
   .markdown-body .font-pixel{font-family:var(--font-pixel)}
@@ -204,7 +213,7 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
       if (!panel) {
         panel = document.createElement("aside");
         panel.className = "blog-category-filter";
-        panel.innerHTML = '<label for="blog-category-select">Category</label><select id="blog-category-select" aria-label="Filter blog posts by category"></select>';
+        panel.innerHTML = '<label for="blog-category-select">Category</label><select id="blog-category-select" aria-label="Filter blog posts by category"></select><div class="blog-archive" aria-label="Blog archive"><span class="blog-archive-title">Archive</span><div class="blog-archive-list"></div></div>';
         page.insertBefore(panel, list);
         panel.querySelector("select").addEventListener("change", (event) => {
           selectedCategory = event.target.value;
@@ -224,6 +233,95 @@ One thing avoided. One thing wanted. One tiny repair. One open question.`}],je=[
         const show = select.value === "all" || readCategory(row) === select.value;
         row.classList.toggle("is-filtered-out", !show);
       });
+
+      renderBlogArchive(rows, panel);
+    }
+
+    function readPostDate(row) {
+      const meta = row.querySelectorAll(".post-meta span");
+      return (meta[0]?.textContent || "").replace(/\s+/g, " ").trim();
+    }
+
+    function readPostTitle(row) {
+      return (row.querySelector(".post-row h2")?.textContent || "Untitled").trim();
+    }
+
+    function readPostHref(row) {
+      return row.querySelector(".post-row")?.getAttribute("href") || "#blog";
+    }
+
+    function archiveBucketFor(dateText) {
+      const months = {
+        january: 1,
+        february: 2,
+        march: 3,
+        april: 4,
+        may: 5,
+        june: 6,
+        july: 7,
+        august: 8,
+        september: 9,
+        october: 10,
+        november: 11,
+        december: 12
+      };
+      const yearMatch = dateText.match(/\b(20\d{2}|19\d{2})\b/);
+      if (!yearMatch) return null;
+
+      const year = Number(yearMatch[1]);
+      const lowerDate = dateText.toLowerCase();
+      const monthName = Object.keys(months).find((month) => lowerDate.includes(month));
+      const currentYear = new Date().getFullYear();
+
+      if (year === currentYear && monthName) {
+        const month = months[monthName];
+        const label = `${monthName[0].toUpperCase()}${monthName.slice(1)} ${year}`;
+        return { key: `${year}-${String(month).padStart(2, "0")}`, label, sort: year * 100 + month };
+      }
+
+      return { key: String(year), label: String(year), sort: year * 100 };
+    }
+
+    function renderBlogArchive(rows, panel) {
+      const archiveList = panel.querySelector(".blog-archive-list");
+      if (!archiveList) return;
+
+      const groups = new Map();
+      rows.forEach((row) => {
+        const bucket = archiveBucketFor(readPostDate(row));
+        if (!bucket) return;
+        if (!groups.has(bucket.key)) groups.set(bucket.key, { ...bucket, posts: [] });
+        groups.get(bucket.key).posts.push({
+          title: readPostTitle(row),
+          href: readPostHref(row)
+        });
+      });
+
+      archiveList.textContent = "";
+      [...groups.values()]
+        .sort((a, b) => b.sort - a.sort)
+        .forEach((group, index) => {
+          const details = document.createElement("details");
+          if (index === 0) details.open = true;
+
+          const summary = document.createElement("summary");
+          const label = document.createElement("span");
+          const count = document.createElement("span");
+          count.className = "blog-archive-count";
+          label.textContent = group.label;
+          count.textContent = group.posts.length;
+          summary.append(label, count);
+          details.append(summary);
+
+          group.posts.forEach((post) => {
+            const link = document.createElement("a");
+            link.href = post.href;
+            link.textContent = post.title;
+            details.append(link);
+          });
+
+          archiveList.append(details);
+        });
     }
 
     window.addEventListener("hashchange", () => setTimeout(syncBlogFilter, 50));
