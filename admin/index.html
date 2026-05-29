@@ -192,7 +192,7 @@ More writing here.</textarea>
             <div class="actions">
               <button id="copy-button" type="button">Copy Markdown</button>
               <button id="download-button" type="button">Download File</button>
-              <a class="button-link" href="https://github.com/ibeshkhadka/hello/tree/main/posts" target="_blank" rel="noreferrer">Open Posts Folder</a>
+              <a class="button-link" href="https://github.com/ibeshkhadka/hello/upload/main/posts" target="_blank" rel="noreferrer">Upload to Posts Folder</a>
             </div>
           </section>
 
@@ -200,7 +200,7 @@ More writing here.</textarea>
             <h2>Publish</h2>
             <ol>
               <li>Click Download File.</li>
-              <li>Open the GitHub posts folder.</li>
+              <li>Open the GitHub upload page.</li>
               <li>Upload the downloaded `.md` file there.</li>
               <li>Add the filename to `posts/posts.json`.</li>
             </ol>
@@ -248,8 +248,13 @@ More writing here.</textarea>
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.download = filename.textContent;
+        link.style.display = "none";
+        document.body.appendChild(link);
         link.click();
-        URL.revokeObjectURL(link.href);
+        window.setTimeout(() => {
+          URL.revokeObjectURL(link.href);
+          link.remove();
+        }, 1000);
       });
     </script>
   </body>
